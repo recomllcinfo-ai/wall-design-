@@ -27,7 +27,7 @@ export const OffRampModal: React.FC<OffRampModalProps> = ({ isOpen, onClose }) =
   const selectedToken: Token = tokens.find((t) => t.symbol === selectedSymbol) ?? tokens[0];
   const [cryptoAmount, setCryptoAmount] = useState('');
   const [payoutMethod, setPayoutMethod] = useState<'bank' | 'card'>('bank');
-  const [bankAccount] = useState('Chase Bank (**** 4892)');
+  const [bankAccount] = useState('Example Bank (simulated)');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
@@ -59,7 +59,7 @@ export const OffRampModal: React.FC<OffRampModalProps> = ({ isOpen, onClose }) =
         tokenSymbol: selectedToken.symbol,
         cryptoAmount: numCrypto,
         fiatAmount: netPayoutUsd,
-        payoutMethod: payoutMethod === 'bank' ? bankAccount : 'Visa Debit (**** 3810)',
+        payoutMethod: payoutMethod === 'bank' ? bankAccount : 'Example Card (simulated)',
       });
 
       setIsSuccess(true);
@@ -90,6 +90,9 @@ export const OffRampModal: React.FC<OffRampModalProps> = ({ isOpen, onClose }) =
           <div className="flex items-center space-x-2">
             <CreditCard className="w-5 h-5 text-emerald-400" />
             <h3 className="text-lg font-bold text-white">Cash Out to Bank / Card</h3>
+            <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-[10px] font-bold text-amber-300 uppercase">
+              Simulation
+            </span>
           </div>
           <button
             onClick={handleClose}
@@ -105,14 +108,14 @@ export const OffRampModal: React.FC<OffRampModalProps> = ({ isOpen, onClose }) =
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <div>
-              <h4 className="text-lg font-bold text-white">Withdrawal Initiated!</h4>
+              <h4 className="text-lg font-bold text-white">Simulated Withdrawal Complete</h4>
               <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-                <strong>{formatFiat(netPayoutUsd, currency)}</strong> is on its way to your{' '}
-                {payoutMethod === 'bank' ? bankAccount : 'Visa Debit Card'}.
+                In a real wallet, <strong>{formatFiat(netPayoutUsd, currency)}</strong> would now be sent to your{' '}
+                {payoutMethod === 'bank' ? 'bank account' : 'debit card'}.
               </p>
             </div>
-            <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-400">
-              Estimated delivery: <strong>Within 30 minutes (Instant ACH/SEPA)</strong>
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300">
+              This is a learning simulation. <strong>No real money has been sent</strong> and none can be withdrawn.
             </div>
             <button
               onClick={handleClose}
