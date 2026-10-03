@@ -64,10 +64,14 @@ export const AuthScreen: React.FC = () => {
         <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
           <MailCheck className="w-8 h-8 text-emerald-400" />
         </div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-300">Apex Offshore</p>
         <h1 className="text-xl font-bold text-white">Check your email</h1>
         <p className="text-sm text-slate-400">
           We sent a confirmation link to <span className="text-slate-200">{confirmationSentTo}</span>.
-          Open it, then sign in here.
+          Open it to finish creating your account, then sign in here.
+        </p>
+        <p className="text-xs text-slate-500">
+          It can take a minute. Check spam if it is not in your inbox.
         </p>
         <button
           onClick={() => { setConfirmationSentTo(null); switchMode('sign_in'); }}
@@ -90,6 +94,7 @@ export const AuthScreen: React.FC = () => {
         </div>
       </div>
 
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-300 mb-2">Apex Offshore</p>
       <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">
         {mode === 'sign_in' ? 'Welcome Back' : 'Create Your Account'}
       </h1>

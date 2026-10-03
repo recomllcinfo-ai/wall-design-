@@ -251,11 +251,11 @@ begin
   select * into acc from public.wallet_accounts where user_id = uid order by created_at limit 1;
   if not found then
     insert into public.wallet_accounts (user_id, name, address, derivation_path, is_demo)
-    values (uid, 'Master Account (Demo)', '0x' || encode(extensions.gen_random_bytes(20), 'hex'),
+    values (uid, 'Master Account', '0x' || encode(extensions.gen_random_bytes(20), 'hex'),
             'm/44''/60''/0''/0/0', true)
     returning * into acc;
   else
-    update public.wallet_accounts set name = 'Master Account (Demo)', is_demo = true
+    update public.wallet_accounts set name = 'Master Account', is_demo = true
      where id = acc.id returning * into acc;
   end if;
 
@@ -267,8 +267,8 @@ begin
   insert into public.transactions
     (account_id, hash, type, from_address, to_address, amount, token_symbol, network_id, memo)
   values
-    (acc.id, public._new_hash(), 'receive', 'Demo Faucet', acc.address, 600000, 'USDC', 'ethereum',
-     'Simulated demo funding (~$3M across BTC, ETH, USDC, USDT)');
+    (acc.id, public._new_hash(), 'receive', 'Funding', acc.address, 600000, 'USDC', 'ethereum',
+     'Initial funding');
   return acc.id;
 end $$;
 

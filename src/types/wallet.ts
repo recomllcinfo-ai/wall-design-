@@ -71,7 +71,7 @@ export interface Account {
   solanaAddress?: string;
   bitcoinAddress?: string;
   derivationPath: string;
-  isDemo?: boolean; // holds simulated demo funds
+  isDemo?: boolean;
 }
 
 export interface GasOption {
