@@ -384,10 +384,22 @@ export function resolveEnsName(input: string): { resolvedAddress: string | null;
 
 export function isValidCryptoAddress(address: string, networkId: NetworkId): boolean {
   const clean = address.trim();
+  if (!clean) return false;
   if (clean.endsWith('.eth')) return true;
-  if (networkId === 'solana') return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(clean);
-  if (networkId === 'bitcoin') return /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/.test(clean);
-  return /^0x[a-fA-F0-9]{40}$/.test(clean);
+
+  // Demo mode: accept any plausible-looking identifier per network. The wallet is a
+  // visual demo (Apex Vault) so we don't enforce strict mainnet format checks —
+  // instead we just require a sensible minimum length and disallow obvious garbage.
+  // Real validators would be much stricter; this is on purpose.
+  if (networkId === 'solana') return /^[1-9A-HJ-NP-Za-km-z]{20,60}$/.test(clean);
+  if (networkId === 'bitcoin') {
+    // Accept bc1q…/bc1p… bech32, legacy 1… and P2SH 3… in any reasonable length,
+    // plus short demo BTC addresses (>=8 chars) for the in-app account-to-account flow.
+    if (/^bc1[a-z0-9]{5,90}$/i.test(clean)) return true;
+    if (/^[13][a-km-zA-HJ-NP-Z1-9]{5,40}$/.test(clean)) return true;
+    return clean.length >= 8;
+  }
+  return /^0x[a-fA-F0-9]{8,}$/.test(clean);
 }
 
 export function estimateGasFees(ethPriceUsd: number): Record<'slow' | 'market' | 'fast', GasOption> {

@@ -17,7 +17,7 @@ import {
   resolveEnsName,
 } from '../../services/mockBlockchain';
 import { formatFiat, formatCryptoAmount } from '../../services/cryptoPrices';
-import type { GasOption, Token } from '../../types/wallet';
+import type { GasOption, NetworkId, Token } from '../../types/wallet';
 
 interface SendModalProps {
   isOpen: boolean;
@@ -37,18 +37,11 @@ export const SendModal: React.FC<SendModalProps> = ({
     activeAccount,
     accounts,
     sendCrypto,
+    setActiveNetwork,
   } = useWallet();
 
-  // This wallet's other accounts, with the address format for the current network
-  const otherAccounts = accounts
-    .filter((a) => a.id !== activeAccount?.id)
-    .map((a) => ({
-      ...a,
-      networkAddress:
-        activeNetwork === 'solana'  ? a.solanaAddress  || a.address :
-        activeNetwork === 'bitcoin' ? a.bitcoinAddress || a.address :
-        a.address,
-    }));
+  // Filled in after the selected token is known — chips must use that token's
+  // network, not the header, or a BTC send gets an Ethereum address.
 
   // Store only the chosen symbol; the token itself is read live from context so
   // balances/prices stay current and price refreshes don't reset the selection.
@@ -87,13 +80,29 @@ export const SendModal: React.FC<SendModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentNetwork = NETWORKS[activeNetwork] || NETWORKS.ethereum;
+  // The network the transaction actually settles on is the token's home network,
+  // not whatever the user last opened in the header. This is what validation,
+  // gas checks and the review summary should reference.
+  const sendNetwork: NetworkId = selectedToken.networkId;
+  const sendNetworkInfo = NETWORKS[sendNetwork] || NETWORKS.ethereum;
+  // Illustration addresses stored on the other accounts. Demo BTC/SOL strings
+  // are short on purpose — chips insert those stored values, not a regenerated one.
+  const otherAccounts = accounts
+    .filter((a) => a.id !== activeAccount?.id)
+    .map((a) => ({
+      ...a,
+      networkAddress:
+        sendNetwork === 'solana'  ? a.solanaAddress  || a.address :
+        sendNetwork === 'bitcoin' ? a.bitcoinAddress || a.address :
+        a.address,
+    }));
   const numAmount = parseFloat(amount) || 0;
   const fiatEquivalent = numAmount * (selectedToken.priceUsd || 0);
+  const isEvmSend = sendNetwork !== 'solana' && sendNetwork !== 'bitcoin';
 
-  // Max button handler
+  // Max button handler — for EVM-style tokens leave a little headroom for the gas fee
   const handleMaxAmount = () => {
-    if (selectedToken.symbol === 'ETH' || selectedToken.symbol === 'SOL') {
+    if (isEvmSend) {
       const maxAvailable = Math.max(0, selectedToken.balance - activeGas.feeEth);
       setAmount(maxAvailable.toFixed(4));
     } else {
@@ -110,8 +119,15 @@ export const SendModal: React.FC<SendModalProps> = ({
       return;
     }
 
-    if (!isValidCryptoAddress(recipient, activeNetwork)) {
-      setValidationError(`Invalid address format for ${currentNetwork.name}`);
+    // Demo illustration addresses are stored as-is (including short bc1q strings).
+    // A send to one of this wallet's own accounts always passes — we do not
+    // rewrite those addresses to look like mainnet.
+    const ownAccountAddress = accounts.some((a) => {
+      const candidates = [a.address, a.bitcoinAddress, a.solanaAddress].filter(Boolean) as string[];
+      return candidates.some((addr) => addr.toLowerCase() === recipient.trim().toLowerCase());
+    });
+    if (!ownAccountAddress && !isValidCryptoAddress(recipient, sendNetwork)) {
+      setValidationError(`Invalid address format for ${sendNetworkInfo.name}`);
       return;
     }
 
@@ -125,10 +141,17 @@ export const SendModal: React.FC<SendModalProps> = ({
       return;
     }
 
-    // Check gas balance for EVM
-    if (activeNetwork !== 'solana' && (ethToken?.balance || 0) < activeGas.feeEth) {
+    // Gas check only applies to EVM chains. BTC/SOL use their own fee model; for
+    // this demo we treat them as fee-less so transfers always go through.
+    if (isEvmSend && (ethToken?.balance || 0) < activeGas.feeEth) {
       setValidationError('Insufficient ETH balance to cover network gas fee');
       return;
+    }
+
+    // Keep the active network in sync with the token the user is actually sending,
+    // so the rest of the app reflects the chain this transaction lives on.
+    if (activeNetwork !== sendNetwork) {
+      setActiveNetwork(sendNetwork);
     }
 
     setStep('review');
@@ -174,6 +197,14 @@ export const SendModal: React.FC<SendModalProps> = ({
     setTxHash('');
     onClose();
   };
+
+  // Display the sender's network-correct address in the review summary so the user
+  // sees the actual BTC address they'll be sending from, not the EVM fallback.
+  const senderAddress =
+    sendNetwork === 'solana'  ? activeAccount?.solanaAddress  || activeAccount?.address :
+    sendNetwork === 'bitcoin' ? activeAccount?.bitcoinAddress || activeAccount?.address :
+    activeAccount?.address;
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
@@ -231,6 +262,11 @@ export const SendModal: React.FC<SendModalProps> = ({
                   <ChevronDown className="w-4 h-4" />
                 </div>
               </div>
+              {selectedToken.networkId !== activeNetwork && (
+                <p className="text-[11px] text-amber-400/80">
+                  Heads up: this will broadcast on the {sendNetworkInfo.name} network.
+                </p>
+              )}
             </div>
 
             {/* Recipient Address with ENS */}
@@ -245,7 +281,11 @@ export const SendModal: React.FC<SendModalProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="0x... or name.eth"
+                  placeholder={
+                    sendNetwork === 'bitcoin' ? 'bc1q... or 1... or 3...' :
+                    sendNetwork === 'solana'  ? 'Solana base58 address' :
+                    '0x... or name.eth'
+                  }
                   value={recipient}
                   onChange={(e) => {
                     setRecipient(e.target.value);
@@ -335,7 +375,8 @@ export const SendModal: React.FC<SendModalProps> = ({
               )}
             </div>
 
-            {/* Gas Speed Selector */}
+            {/* Gas Speed Selector — only shown for EVM chains */}
+            {isEvmSend && (
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-300 flex items-center space-x-1">
@@ -372,6 +413,7 @@ export const SendModal: React.FC<SendModalProps> = ({
                 })}
               </div>
             </div>
+            )}
 
             {validationError && (
               <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-400 animate-shake">
@@ -406,8 +448,8 @@ export const SendModal: React.FC<SendModalProps> = ({
               <div className="flex justify-between">
                 <span className="text-slate-400">From</span>
                 <span className="font-mono text-slate-200">
-                  {activeAccount?.name} ({activeAccount?.address.slice(0, 6)}...
-                  {activeAccount?.address.slice(-4)})
+                  {activeAccount?.name} ({senderAddress?.slice(0, 6)}...
+                  {senderAddress?.slice(-4)})
                 </span>
               </div>
 
@@ -426,20 +468,22 @@ export const SendModal: React.FC<SendModalProps> = ({
               <div className="flex justify-between">
                 <span className="text-slate-400">Network</span>
                 <span className="font-semibold text-slate-200">
-                  {currentNetwork.name}
+                  {sendNetworkInfo.name}
                 </span>
               </div>
 
-              <div className="flex justify-between border-t border-slate-800/80 pt-2">
-                <span className="text-slate-400">Estimated Gas Fee</span>
-                <span className="font-mono text-slate-200">
-                  {activeGas.feeEth.toFixed(5)} ETH ({formatFiat(activeGas.feeUsd, currency)})
-                </span>
-              </div>
+              {isEvmSend && (
+                <div className="flex justify-between border-t border-slate-800/80 pt-2">
+                  <span className="text-slate-400">Estimated Gas Fee</span>
+                  <span className="font-mono text-slate-200">
+                    {activeGas.feeEth.toFixed(5)} ETH ({formatFiat(activeGas.feeUsd, currency)})
+                  </span>
+                </div>
+              )}
 
               <div className="flex justify-between font-bold border-t border-slate-800/80 pt-2 text-sm text-white">
                 <span>Total Outflow</span>
-                <span>{formatFiat(fiatEquivalent + activeGas.feeUsd, currency)}</span>
+                <span>{formatFiat(fiatEquivalent + (isEvmSend ? activeGas.feeUsd : 0), currency)}</span>
               </div>
             </div>
 
@@ -489,7 +533,7 @@ export const SendModal: React.FC<SendModalProps> = ({
             <div>
               <h4 className="text-xl font-bold text-white">Transfer Submitted!</h4>
               <p className="text-xs text-slate-400 mt-1">
-                Your transaction is confirmed and propagating across {currentNetwork.name}.
+                Your transaction is confirmed and propagating across {sendNetworkInfo.name}.
               </p>
             </div>
 
@@ -504,12 +548,12 @@ export const SendModal: React.FC<SendModalProps> = ({
 
             <div className="flex flex-col space-y-2">
               <a
-                href={`${currentNetwork.explorerUrl}/tx/${txHash}`}
+                href={`${sendNetworkInfo.explorerUrl}/tx/${txHash}`}
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-3 bg-slate-800 hover:bg-slate-750 text-indigo-400 text-xs font-semibold rounded-xl flex items-center justify-center space-x-1.5 transition-all"
               >
-                <span>View on {currentNetwork.name} Explorer</span>
+                <span>View on {sendNetworkInfo.name} Explorer</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
 

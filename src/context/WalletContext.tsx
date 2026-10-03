@@ -298,7 +298,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password: pass,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? window.location.origin : "https://apexoffshore.online" },
     });
     if (error) return { error: error.message, needsConfirmation: false };
     // With email confirmation enabled, Supabase returns no session until the link is clicked
@@ -368,13 +368,15 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }): Promise<string> => {
     const acc = requireAccount();
     const token = tokens.find(t => t.symbol === params.tokenSymbol);
-    const isEvm = activeNetwork !== 'solana' && activeNetwork !== 'bitcoin';
+    if (!token) throw new Error(`Unknown token: ${params.tokenSymbol}`);
+    const sendNetwork = token.networkId;
+    const isEvm = sendNetwork !== 'solana' && sendNetwork !== 'bitcoin';
     const { data, error } = await supabase.rpc('transfer', {
       p_from:     acc.id,
       p_to:       params.to,
       p_symbol:   params.tokenSymbol,
       p_amount:   params.amount,
-      p_network:  activeNetwork,
+      p_network:  sendNetwork,
       p_gas_eth:  isEvm ? params.gasFeeEth : 0,
       p_gas_usd:  params.gasFeeUsd,
       p_fiat_usd: (token?.priceUsd ?? 0) * params.amount,
