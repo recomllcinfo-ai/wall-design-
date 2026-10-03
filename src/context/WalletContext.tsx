@@ -385,21 +385,19 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
     if (error) throw new Error(error.message);
     const hash = data as string;
-    let mailed: { sent?: boolean; sameUser?: boolean } | null = null;
+    let mailed: { sent?: boolean; sender?: boolean; recipient?: boolean } | null = null;
     try {
       const mail = await supabase.functions.invoke('notify-payment', { body: { hash } });
       if (!mail.error && mail.data && typeof mail.data === 'object') {
-        mailed = mail.data as { sent?: boolean; sameUser?: boolean };
+        mailed = mail.data as { sent?: boolean; sender?: boolean; recipient?: boolean };
       }
     } catch {
       mailed = null;
     }
     await loadWalletData();
-    const receipt = mailed?.sent
-      ? mailed.sameUser
-        ? ' A confirmation was emailed to you.'
-        : ' The recipient was emailed.'
-      : '';
+    const receipt = mailed?.sender
+      ? ` A confirmation was emailed to you.${mailed.recipient ? ' The recipient was emailed.' : ''}`
+      : ' The payment email could not be sent.';
     addNotification('success', 'Transfer Sent', `${params.amount} ${params.tokenSymbol} is on its way.${receipt}`);
     return hash;
   };
