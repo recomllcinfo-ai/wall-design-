@@ -384,9 +384,24 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       p_to_name:  params.toResolvedName ?? null,
     });
     if (error) throw new Error(error.message);
+    const hash = data as string;
+    let mailed: { sent?: boolean; sameUser?: boolean } | null = null;
+    try {
+      const mail = await supabase.functions.invoke('notify-payment', { body: { hash } });
+      if (!mail.error && mail.data && typeof mail.data === 'object') {
+        mailed = mail.data as { sent?: boolean; sameUser?: boolean };
+      }
+    } catch {
+      mailed = null;
+    }
     await loadWalletData();
-    addNotification('success', 'Transfer Sent', `${params.amount} ${params.tokenSymbol} is on its way.`);
-    return data as string;
+    const receipt = mailed?.sent
+      ? mailed.sameUser
+        ? ' A confirmation was emailed to you.'
+        : ' The recipient was emailed.'
+      : '';
+    addNotification('success', 'Transfer Sent', `${params.amount} ${params.tokenSymbol} is on its way.${receipt}`);
+    return hash;
   };
 
   const swapTokens = async (params: {
