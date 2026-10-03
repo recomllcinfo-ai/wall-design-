@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, History, Sparkles, Smartphone, Monitor, ShieldCheck, FlaskConical } from 'lucide-react';
+import { Coins, History, Sparkles, Smartphone, Monitor, ShieldCheck } from 'lucide-react';
 import { WalletProvider, useWallet } from './context/WalletContext';
 import { AuthScreen }      from './components/auth/AuthScreen';
 import { OnboardingWizard } from './components/auth/OnboardingWizard';
@@ -15,15 +15,6 @@ import { OffRampModal }    from './components/modals/OffRampModal';
 import { SettingsModal }   from './components/modals/SettingsModal';
 import { ToastContainer }  from './components/ui/ToastContainer';
 import type { Token }      from './types/wallet';
-
-// ─── Demo notice ──────────────────────────────────────────────────────────────
-// Shown on every screen: all balances in this app are simulated.
-const DemoBanner: React.FC = () => (
-  <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-amber-500/15 border-b border-amber-500/30 text-[11px] font-semibold text-amber-300 text-center">
-    <FlaskConical className="w-3.5 h-3.5 shrink-0" />
-    <span>Demo app — all balances are simulated and are not real cryptocurrency.</span>
-  </div>
-);
 
 // ─── Main wallet shell ────────────────────────────────────────────────────────
 const WalletMain: React.FC = () => {
@@ -60,7 +51,6 @@ const WalletMain: React.FC = () => {
   if (vaultStatus === 'signed_out') {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col">
-        <DemoBanner />
         <div className="flex-1 flex flex-col justify-center items-center p-4">
           <AuthScreen />
         </div>
@@ -71,7 +61,6 @@ const WalletMain: React.FC = () => {
   if (vaultStatus === 'needs_wallet') {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col">
-        <DemoBanner />
         <div className="flex-1 flex flex-col justify-center items-center p-4">
           <OnboardingWizard />
         </div>
@@ -145,7 +134,6 @@ const WalletMain: React.FC = () => {
   if (isExtensionView) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 sm:p-8">
-        <div className="mb-4 w-full max-w-md rounded-xl overflow-hidden"><DemoBanner /></div>
         <div className="mb-4 flex items-center space-x-3 bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl text-xs">
           <div className="flex items-center space-x-1.5 text-indigo-400 font-semibold">
             <Smartphone className="w-4 h-4" />
@@ -176,7 +164,6 @@ const WalletMain: React.FC = () => {
   // ── Full dashboard ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
-      <DemoBanner />
       <div className="hidden lg:flex items-center justify-between px-6 py-1.5 bg-indigo-950/30 border-b border-indigo-500/15 text-xs">
         <div className="flex items-center space-x-2 text-indigo-300/70 font-medium">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />

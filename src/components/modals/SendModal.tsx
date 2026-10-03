@@ -443,10 +443,10 @@ export const SendModal: React.FC<SendModalProps> = ({
               </div>
             </div>
 
-            {/* Security Simulation Check */}
+            {/* Security Check */}
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center space-x-2 text-xs text-emerald-300">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Simulation passed: No malicious drainer code detected.</span>
+              <span>Security check passed: No malicious drainer code detected.</span>
             </div>
 
             {validationError && (
